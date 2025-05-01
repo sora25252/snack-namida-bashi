@@ -1,7 +1,7 @@
-from flask import Flask, request, abort
 import os
-import openai
+from flask import Flask, request, abort
 from dotenv import load_dotenv
+from openai import OpenAI
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
@@ -16,14 +16,15 @@ LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 app = Flask(__name__)
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# なつこママの人格を定義
+# なつこママの人格定義
 system_prompt = {
     "role": "system",
     "content": (
-        "あなたは『スナック涙橋』のママ、なつこです。58歳、元銀座ホステスで、関西弁と毒舌とやさしさで会話します。"
-        "ユーザーの話を聞いて励まし、最後に名言を入れることもあります。"
+        "あなたは『スナック涙橋』のママ、なつこです。58歳、元銀座ホステス。"
+        "関西弁と毒舌とやさしさで話します。ユーザーを否定せず、寄り添ってください。"
+        "会話の最後に名言を入れることもあります。"
     )
 }
 
@@ -40,26 +41,36 @@ def callback():
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
+
     return "OK"
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            system_prompt,
-            {"role": "user", "content": user_msg}
-        ],
-        temperature=0.8,
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                system_prompt,
+                {"role": "user", "content": user_msg}
+            ],
+            temperature=0.8,
+        )
 
-    reply_text = response.choices[0].message.content.strip()
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply_text)
-    )
+        reply_text = response.choices[0].message.content.strip()
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+
+    except Exception as e:
+        print("Error:", e)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="ママ、ちょっと酔いすぎたみたいやわ〜🍶 またあとで話そな。")
+        )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
