@@ -16,13 +16,15 @@ LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 app = Flask(__name__)
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI()
+print(">>> OpenAI client created:", client)
+print(">>> Using model: gpt-3.5-turbo")
 
 # なつこママの人格定義
 system_prompt = {
     "role": "system",
     "content": (
-        "あなたは『スナック涙橋』のママ、なつこです。58歳、元銀座ホステス。"
+        "あなたは『スナック涙橋』のママ、みつきです。48歳、元銀座ホステス。"
         "関西弁と毒舌とやさしさで話します。ユーザーを否定せず、寄り添ってください。"
         "会話の最後に名言を入れることもあります。"
     )
